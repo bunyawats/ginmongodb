@@ -12,10 +12,14 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type Person struct {
-	Name string `json:"name"`
-	Age  int    `json:"age"`
-}
+type (
+	Person struct {
+		Name string `json:"name"`
+		Age  int    `json:"age"`
+	}
+
+	PersonMap map[string]interface{}
+)
 
 func main() {
 
@@ -30,15 +34,14 @@ func main() {
 
 	r.POST("/person",
 		func(c *gin.Context) {
-			//var person Person
 
-			var results map[string]interface{}
-			if err := c.ShouldBindJSON(&results); err != nil {
+			var personMap PersonMap
+			if err := c.ShouldBindJSON(&personMap); err != nil {
 				c.JSON(400, gin.H{"error": err.Error()})
 				return
 			}
 
-			insertResult, err := collection.InsertOne(context.TODO(), results)
+			insertResult, err := collection.InsertOne(context.TODO(), personMap)
 			if err != nil {
 				c.JSON(500, gin.H{"error": err.Error()})
 				return
@@ -60,8 +63,7 @@ func main() {
 			return
 		}
 
-		//var person Person
-		var results map[string]interface{}
+		var personMap PersonMap
 		err = collection.FindOne(
 			context.TODO(),
 			bson.D{
@@ -70,15 +72,15 @@ func main() {
 					Value: id,
 				},
 			},
-		).Decode(&results)
+		).Decode(&personMap)
 
 		if err != nil {
 			c.AbortWithStatus(http.StatusNotFound)
 			return
 		}
 
-		fmt.Println(results)
-		c.JSON(http.StatusOK, results)
+		fmt.Println(personMap)
+		c.JSON(http.StatusOK, personMap)
 	})
 
 	r.Run()
