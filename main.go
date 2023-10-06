@@ -25,6 +25,10 @@ type (
 	}
 )
 
+var (
+	collection *mongo.Collection
+)
+
 func (sc *ServiceController) getPersonByID(c *gin.Context) {
 	idStr := c.Param("id")
 
@@ -75,8 +79,7 @@ func (sc *ServiceController) creatPerson(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "Person saved", "id": insertResult.InsertedID})
 }
 
-func NewServiceController() *ServiceController {
-
+func init() {
 	client, err := mongo.Connect(
 		context.TODO(),
 		options.Client().ApplyURI("mongodb://localhost:27017"),
@@ -84,18 +87,14 @@ func NewServiceController() *ServiceController {
 	if err != nil {
 		panic(err)
 	}
-	collection := client.Database("test").Collection("people")
-
-	controller := &ServiceController{
-		c: collection,
-	}
-
-	return controller
+	collection = client.Database("test").Collection("people")
 }
 
 func main() {
 
-	sc := NewServiceController()
+	sc := &ServiceController{
+		c: collection,
+	}
 
 	route := gin.Default()
 
