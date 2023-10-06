@@ -13,10 +13,10 @@ import (
 )
 
 type (
-	Person struct {
-		Name string `json:"name"`
-		Age  int    `json:"age"`
-	}
+	//Person struct {
+	//	Name string `json:"name"`
+	//	Age  int    `json:"age"`
+	//}
 
 	PersonMap map[string]interface{}
 )
@@ -26,31 +26,29 @@ func main() {
 	r := gin.Default()
 
 	// Connect to MongoDB
-	client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI("mongodb://localhost:27017"))
+	client, err := mongo.Connect(
+		context.TODO(),
+		options.Client().ApplyURI("mongodb://localhost:27017"),
+	)
 	if err != nil {
 		panic(err)
 	}
 	collection := client.Database("test").Collection("people")
 
 	r.POST("/person",
-		func(c *gin.Context) {
+		creatPerson(collection),
+	)
 
-			var personMap PersonMap
-			if err := c.ShouldBindJSON(&personMap); err != nil {
-				c.JSON(400, gin.H{"error": err.Error()})
-				return
-			}
+	r.GET("/person/:id",
+		getPersonByID(collection),
+	)
 
-			insertResult, err := collection.InsertOne(context.TODO(), personMap)
-			if err != nil {
-				c.JSON(500, gin.H{"error": err.Error()})
-				return
-			}
+	_ = r.Run()
 
-			c.JSON(200, gin.H{"message": "Person saved", "id": insertResult.InsertedID})
-		})
+}
 
-	r.GET("/person/:id", func(c *gin.Context) {
+func getPersonByID(collection *mongo.Collection) func(c *gin.Context) {
+	return func(c *gin.Context) {
 		idStr := c.Param("id")
 
 		fmt.Println(idStr)
@@ -81,7 +79,24 @@ func main() {
 
 		fmt.Println(personMap)
 		c.JSON(http.StatusOK, personMap)
-	})
+	}
+}
 
-	r.Run()
+func creatPerson(collection *mongo.Collection) func(c *gin.Context) {
+	return func(c *gin.Context) {
+
+		var personMap PersonMap
+		if err := c.ShouldBindJSON(&personMap); err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+
+		insertResult, err := collection.InsertOne(context.TODO(), personMap)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(200, gin.H{"message": "Person saved", "id": insertResult.InsertedID})
+	}
 }
