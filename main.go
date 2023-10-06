@@ -19,13 +19,64 @@ type (
 	//}
 
 	PersonMap map[string]interface{}
+
+	ServiceController struct {
+		c *mongo.Collection
+	}
 )
 
-func main() {
+func (sc *ServiceController) getPersonByID(c *gin.Context) {
+	idStr := c.Param("id")
 
-	r := gin.Default()
+	fmt.Println(idStr)
 
-	// Connect to MongoDB
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest,
+			gin.H{"error": err.Error()},
+		)
+		return
+	}
+
+	var personMap PersonMap
+	err = sc.c.FindOne(
+		context.TODO(),
+		bson.D{
+			{
+				Key:   "_id",
+				Value: id,
+			},
+		},
+	).Decode(&personMap)
+
+	if err != nil {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	fmt.Println(personMap)
+	c.JSON(http.StatusOK, personMap)
+}
+
+func (sc *ServiceController) creatPerson(c *gin.Context) {
+
+	var personMap PersonMap
+	if err := c.ShouldBindJSON(&personMap); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	insertResult, err := sc.c.InsertOne(context.TODO(), personMap)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"message": "Person saved", "id": insertResult.InsertedID})
+}
+
+func NewServiceController() *ServiceController {
+
 	client, err := mongo.Connect(
 		context.TODO(),
 		options.Client().ApplyURI("mongodb://localhost:27017"),
@@ -35,68 +86,22 @@ func main() {
 	}
 	collection := client.Database("test").Collection("people")
 
-	r.POST("/person",
-		creatPerson(collection),
-	)
+	controller := &ServiceController{
+		c: collection,
+	}
 
-	r.GET("/person/:id",
-		getPersonByID(collection),
-	)
-
-	_ = r.Run()
-
+	return controller
 }
 
-func getPersonByID(collection *mongo.Collection) func(c *gin.Context) {
-	return func(c *gin.Context) {
-		idStr := c.Param("id")
+func main() {
 
-		fmt.Println(idStr)
+	sc := NewServiceController()
 
-		id, err := primitive.ObjectIDFromHex(idStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest,
-				gin.H{"error": err.Error()},
-			)
-			return
-		}
+	route := gin.Default()
 
-		var personMap PersonMap
-		err = collection.FindOne(
-			context.TODO(),
-			bson.D{
-				{
-					Key:   "_id",
-					Value: id,
-				},
-			},
-		).Decode(&personMap)
+	route.POST("/person", sc.creatPerson)
+	route.GET("/person/:id", sc.getPersonByID)
 
-		if err != nil {
-			c.AbortWithStatus(http.StatusNotFound)
-			return
-		}
+	_ = route.Run()
 
-		fmt.Println(personMap)
-		c.JSON(http.StatusOK, personMap)
-	}
-}
-
-func creatPerson(collection *mongo.Collection) func(c *gin.Context) {
-	return func(c *gin.Context) {
-
-		var personMap PersonMap
-		if err := c.ShouldBindJSON(&personMap); err != nil {
-			c.JSON(400, gin.H{"error": err.Error()})
-			return
-		}
-
-		insertResult, err := collection.InsertOne(context.TODO(), personMap)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.JSON(200, gin.H{"message": "Person saved", "id": insertResult.InsertedID})
-	}
 }
