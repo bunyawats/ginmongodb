@@ -82,3 +82,15 @@ func (r MongoRepository) CreateNewMovie(payload bson.M) (*mongo.InsertOneResult,
 
 	return r.c.InsertOne(context.TODO(), payload)
 }
+
+func (r MongoRepository) DeleteMovieByID(id primitive.ObjectID) (*mongo.DeleteResult, error) {
+
+	filter := bson.D{
+		{
+			Key:   "_id",
+			Value: id,
+		},
+	}
+
+	return r.c.DeleteOne(context.TODO(), filter)
+}

@@ -67,6 +67,7 @@ func main() {
 	route.GET("/movies/year/:year", sc.getAllMovie)
 	route.GET("/movies/:id", sc.getMovieByID)
 	route.POST("/movies", sc.creatNewMovie)
+	route.DELETE("/movies/:id", sc.deleteMovieByID)
 
 	_ = route.Run()
 
@@ -75,6 +76,7 @@ func main() {
 func (sc *ServiceController) getAllMovie(c *gin.Context) {
 
 	yearStr := c.Param("year")
+	fmt.Printf("request year: %s\n", yearStr)
 
 	fmt.Println(yearStr)
 	year, err := strconv.Atoi(yearStr)
@@ -110,7 +112,7 @@ func (sc *ServiceController) getAllMovie(c *gin.Context) {
 func (sc *ServiceController) getMovieByID(c *gin.Context) {
 	idStr := c.Param("id")
 
-	fmt.Println(idStr)
+	fmt.Printf("request id: %s\n", idStr)
 	id, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest,
@@ -155,4 +157,27 @@ func (sc *ServiceController) creatNewMovie(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, insertResult)
+}
+
+func (sc *ServiceController) deleteMovieByID(c *gin.Context) {
+
+	idStr := c.Param("id")
+	fmt.Printf("request id: %s\n", idStr)
+
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest,
+			gin.H{"error": err.Error()},
+		)
+		return
+	}
+
+	deleteResult, err := sc.MongoRepository.DeleteMovieByID(id)
+
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, deleteResult)
 }
