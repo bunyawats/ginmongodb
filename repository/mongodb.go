@@ -37,7 +37,7 @@ func (r MongoRepository) CloseDBConnection() {
 	}
 }
 
-func (r MongoRepository) GetAllMovies(year int) ([]bson.M, error) {
+func (r MongoRepository) GetMoviesByYear(year int) ([]bson.M, error) {
 
 	filter := bson.D{
 		{
@@ -50,13 +50,16 @@ func (r MongoRepository) GetAllMovies(year int) ([]bson.M, error) {
 		context.TODO(),
 		filter,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	var results []bson.M
 	if err = cursor.All(context.TODO(), &results); err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return results, err
+	return results, nil
 }
 
 func (r MongoRepository) GetMoviesById(id primitive.ObjectID) (bson.M, error) {
