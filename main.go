@@ -2,16 +2,20 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/bunyawats/ginmongodb/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 type (
@@ -60,9 +64,9 @@ func main() {
 		repo,
 	}
 
-	//route.POST("/person", sc.creatPerson)
-	//route.GET("/person/:id", sc.getPersonByID)
-	route.GET("/movies", sc.getAllMovie)
+	route.GET("/movies/year/:year", sc.getAllMovie)
+	route.GET("/movies/:id", sc.getMovieByID)
+	route.POST("/movies", sc.creatNewMovie)
 
 	_ = route.Run()
 
@@ -70,12 +74,55 @@ func main() {
 
 func (sc *ServiceController) getAllMovie(c *gin.Context) {
 
-	title := "Back to the Future"
+	yearStr := c.Param("year")
 
-	result, err := sc.MongoRepository.GetAllMovies(title)
+	fmt.Println(yearStr)
+	year, err := strconv.Atoi(yearStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest,
+			gin.H{"error": err.Error()},
+		)
+		return
+	}
+
+	results, err := sc.MongoRepository.GetAllMovies(year)
 
 	if errors.Is(err, mongo.ErrNoDocuments) {
-		fmt.Printf("No document was found with the title %s\n", title)
+		fmt.Printf("No document was found with the year %s\n", year)
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	for _, result := range results {
+		output, err := json.MarshalIndent(result, "", "    ")
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("%s\n", output)
+	}
+
+	c.JSON(http.StatusOK, results)
+}
+
+func (sc *ServiceController) getMovieByID(c *gin.Context) {
+	idStr := c.Param("id")
+
+	fmt.Println(idStr)
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest,
+			gin.H{"error": err.Error()},
+		)
+		return
+	}
+
+	result, err := sc.MongoRepository.GetMoviesById(id)
+
+	if errors.Is(err, mongo.ErrNoDocuments) {
+		fmt.Printf("No document was found with the id %s\n", idStr)
 		c.AbortWithStatus(http.StatusNotFound)
 		return
 	}
@@ -84,6 +131,28 @@ func (sc *ServiceController) getAllMovie(c *gin.Context) {
 		return
 	}
 
-	fmt.Printf("result = %s\n", result)
+	jsonData, err := json.MarshalIndent(result, "", "    ")
+	if err == nil {
+		fmt.Printf("jsonData = %s\n", jsonData)
+	}
+
 	c.JSON(http.StatusOK, result)
+}
+
+func (sc *ServiceController) creatNewMovie(c *gin.Context) {
+
+	var reqPayload bson.M
+	if err := c.ShouldBindJSON(&reqPayload); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	insertResult, err := sc.MongoRepository.CreateNewMovie(reqPayload)
+
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, insertResult)
 }

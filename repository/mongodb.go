@@ -2,9 +2,8 @@ package repository
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -32,79 +31,50 @@ func NewMongoRepository(client *mongo.Client) *MongoRepository {
 	}
 }
 
-func (r MongoRepository) GetAllMovies(title string) (bson.M, error) {
-
-	var result bson.M
-
-	err := r.c.FindOne(
-		context.TODO(),
-		bson.D{
-			{"title", title},
-		},
-	).Decode(&result)
-
-	if errors.Is(err, mongo.ErrNoDocuments) {
-		fmt.Printf("No document was found with the title %s\n", title)
-		return nil, err
-	}
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
 func (r MongoRepository) CloseDBConnection() {
 	if err := r.client.Disconnect(context.TODO()); err != nil {
 		panic(err)
 	}
 }
 
-//func (sc *ServiceController) getPersonByID(c *gin.Context) {
-//	idStr := c.Param("id")
-//
-//	fmt.Println(idStr)
-//
-//	id, err := primitive.ObjectIDFromHex(idStr)
-//	if err != nil {
-//		c.JSON(http.StatusBadRequest,
-//			gin.H{"error": err.Error()},
-//		)
-//		return
-//	}
-//
-//	var personMap PersonMap
-//	err = sc.c.FindOne(
-//		context.TODO(),
-//		bson.D{
-//			{
-//				Key:   "_id",
-//				Value: id,
-//			},
-//		},
-//	).Decode(&personMap)
-//
-//	if err != nil {
-//		c.AbortWithStatus(http.StatusNotFound)
-//		return
-//	}
-//
-//	fmt.Println(personMap)
-//	c.JSON(http.StatusOK, personMap)
-//}
-//
-//func (sc *ServiceController) creatPerson(c *gin.Context) {
-//
-//	var personMap PersonMap
-//	if err := c.ShouldBindJSON(&personMap); err != nil {
-//		c.JSON(400, gin.H{"error": err.Error()})
-//		return
-//	}
-//
-//	insertResult, err := sc.c.InsertOne(context.TODO(), personMap)
-//	if err != nil {
-//		c.JSON(500, gin.H{"error": err.Error()})
-//		return
-//	}
-//
-//	c.JSON(200, gin.H{"message": "Person saved", "id": insertResult.InsertedID})
-//}
+func (r MongoRepository) GetAllMovies(year int) ([]bson.M, error) {
+
+	filter := bson.D{
+		{"year", year},
+	}
+
+	cursor, err := r.c.Find(
+		context.TODO(),
+		filter,
+	)
+
+	var results []bson.M
+	if err = cursor.All(context.TODO(), &results); err != nil {
+		panic(err)
+	}
+
+	return results, err
+}
+
+func (r MongoRepository) GetMoviesById(id primitive.ObjectID) (bson.M, error) {
+
+	var result bson.M
+
+	err := r.c.FindOne(
+		context.TODO(),
+		bson.D{
+			{
+				Key:   "_id",
+				Value: id,
+			},
+		},
+	).Decode(&result)
+
+	return result, err
+
+}
+
+func (r MongoRepository) CreateNewMovie(payload bson.M) (*mongo.InsertOneResult, error) {
+
+	return r.c.InsertOne(context.TODO(), payload)
+}
