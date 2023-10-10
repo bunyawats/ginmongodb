@@ -12,8 +12,7 @@ import (
 )
 
 var (
-	repo   *repository.MongoRepository
-	client *mongo.Client
+	repo *repository.MongoRepository
 )
 
 func init() {
