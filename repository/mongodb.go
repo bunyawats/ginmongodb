@@ -40,7 +40,10 @@ func (r MongoRepository) CloseDBConnection() {
 func (r MongoRepository) GetAllMovies(year int) ([]bson.M, error) {
 
 	filter := bson.D{
-		{"year", year},
+		{
+			Key:   "year",
+			Value: year,
+		},
 	}
 
 	cursor, err := r.c.Find(
@@ -58,16 +61,17 @@ func (r MongoRepository) GetAllMovies(year int) ([]bson.M, error) {
 
 func (r MongoRepository) GetMoviesById(id primitive.ObjectID) (bson.M, error) {
 
-	var result bson.M
+	filter := bson.D{
+		{
+			Key:   "_id",
+			Value: id,
+		},
+	}
 
+	var result bson.M
 	err := r.c.FindOne(
 		context.TODO(),
-		bson.D{
-			{
-				Key:   "_id",
-				Value: id,
-			},
-		},
+		filter,
 	).Decode(&result)
 
 	return result, err
