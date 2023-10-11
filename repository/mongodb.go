@@ -9,8 +9,8 @@ import (
 
 type (
 	MongoRepository struct {
-		client *mongo.Client
-		c      *mongo.Collection
+		*mongo.Client
+		*mongo.Collection
 	}
 
 	//Person struct {
@@ -23,16 +23,14 @@ type (
 
 func NewMongoRepository(client *mongo.Client) *MongoRepository {
 
-	collection := client.Database("sample_mflix").Collection("movies")
-
 	return &MongoRepository{
-		c:      collection,
-		client: client,
+		Collection: client.Database("sample_mflix").Collection("movies"),
+		Client:     client,
 	}
 }
 
 func (r MongoRepository) CloseDBConnection() {
-	if err := r.client.Disconnect(context.TODO()); err != nil {
+	if err := r.Disconnect(context.TODO()); err != nil {
 		panic(err)
 	}
 }
@@ -46,7 +44,7 @@ func (r MongoRepository) GetMoviesByYear(year int) ([]bson.M, error) {
 		},
 	}
 
-	cursor, err := r.c.Find(
+	cursor, err := r.Find(
 		context.TODO(),
 		filter,
 	)
@@ -72,7 +70,7 @@ func (r MongoRepository) GetMoviesById(id primitive.ObjectID) (bson.M, error) {
 	}
 
 	var result bson.M
-	err := r.c.FindOne(
+	err := r.FindOne(
 		context.TODO(),
 		filter,
 	).Decode(&result)
@@ -83,7 +81,7 @@ func (r MongoRepository) GetMoviesById(id primitive.ObjectID) (bson.M, error) {
 
 func (r MongoRepository) CreateNewMovie(payload bson.M) (*mongo.InsertOneResult, error) {
 
-	return r.c.InsertOne(context.TODO(), payload)
+	return r.InsertOne(context.TODO(), payload)
 }
 
 func (r MongoRepository) DeleteMovieByID(id primitive.ObjectID) (*mongo.DeleteResult, error) {
@@ -95,7 +93,7 @@ func (r MongoRepository) DeleteMovieByID(id primitive.ObjectID) (*mongo.DeleteRe
 		},
 	}
 
-	return r.c.DeleteOne(context.TODO(), filter)
+	return r.DeleteOne(context.TODO(), filter)
 }
 
 func (r MongoRepository) UpdateMovieByID(id primitive.ObjectID, payload bson.M) (*mongo.UpdateResult, error) {
@@ -104,6 +102,6 @@ func (r MongoRepository) UpdateMovieByID(id primitive.ObjectID, payload bson.M) 
 		{"$set", payload},
 	}
 
-	return r.c.UpdateByID(context.TODO(), id, update)
+	return r.UpdateByID(context.TODO(), id, update)
 
 }
