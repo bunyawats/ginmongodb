@@ -97,3 +97,13 @@ func (r MongoRepository) DeleteMovieByID(id primitive.ObjectID) (*mongo.DeleteRe
 
 	return r.c.DeleteOne(context.TODO(), filter)
 }
+
+func (r MongoRepository) UpdateMovieByID(id primitive.ObjectID, payload bson.M) (*mongo.UpdateResult, error) {
+
+	update := bson.D{
+		{"$set", payload},
+	}
+
+	return r.c.UpdateByID(context.TODO(), id, update)
+
+}

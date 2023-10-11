@@ -32,6 +32,7 @@ func NewGinRoute(r *repository.MongoRepository) *GinRoute {
 	route.GET("/movies/:id", ginRoute.getMovieByID)
 	route.POST("/movies", ginRoute.creatNewMovie)
 	route.DELETE("/movies/:id", ginRoute.deleteMovieByID)
+	route.PUT("/movies/:id", ginRoute.updateMovieById)
 
 	return ginRoute
 }
@@ -109,14 +110,18 @@ func (sc *GinRoute) creatNewMovie(c *gin.Context) {
 
 	var reqPayload bson.M
 	if err := c.ShouldBindJSON(&reqPayload); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest,
+			gin.H{"error": err.Error()},
+		)
 		return
 	}
 
 	insertResult, err := sc.MongoRepository.CreateNewMovie(reqPayload)
 
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError,
+			gin.H{"error": err.Error()},
+		)
 		return
 	}
 
@@ -139,11 +144,51 @@ func (sc *GinRoute) deleteMovieByID(c *gin.Context) {
 	deleteResult, err := sc.MongoRepository.DeleteMovieByID(id)
 
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError,
+			gin.H{"error": err.Error()},
+		)
 		return
 	}
 
 	c.JSON(http.StatusOK, deleteResult)
+}
+
+func (sc *GinRoute) updateMovieById(c *gin.Context) {
+
+	idStr := c.Param("id")
+	fmt.Printf("request updateMovieById id: %s\n", idStr)
+
+	id, err := primitive.ObjectIDFromHex(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest,
+			gin.H{"error": "id binding error"},
+		)
+		return
+	}
+
+	var reqPayload bson.M
+	if err := c.ShouldBindJSON(&reqPayload); err != nil {
+		c.JSON(http.StatusBadRequest,
+			gin.H{"error": "body binding error"},
+		)
+		return
+	}
+
+	updateResult, err := sc.MongoRepository.UpdateMovieByID(id, reqPayload)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError,
+			gin.H{"error": err.Error()},
+		)
+		return
+	}
+
+	if updateResult.ModifiedCount == 0 {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	c.JSON(http.StatusOK, updateResult)
 }
 
 func (sc *GinRoute) Run() interface{} {
