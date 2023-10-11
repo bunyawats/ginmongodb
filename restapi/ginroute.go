@@ -16,23 +16,22 @@ import (
 type (
 	GinRoute struct {
 		*repository.MongoRepository
-		route *gin.Engine
+		*gin.Engine
 	}
 )
 
 func NewGinRoute(r *repository.MongoRepository) *GinRoute {
 
-	ginRoute := &GinRoute{MongoRepository: r}
+	ginRoute := &GinRoute{
+		MongoRepository: r,
+		Engine:          gin.Default(),
+	}
 
-	route := gin.Default()
-
-	ginRoute.route = route
-
-	route.GET("/movies/year/:year", ginRoute.getMoviesByYear)
-	route.GET("/movies/:id", ginRoute.getMovieByID)
-	route.POST("/movies", ginRoute.creatNewMovie)
-	route.DELETE("/movies/:id", ginRoute.deleteMovieByID)
-	route.PUT("/movies/:id", ginRoute.updateMovieById)
+	ginRoute.GET("/movies/year/:year", ginRoute.getMoviesByYear)
+	ginRoute.GET("/movies/:id", ginRoute.getMovieByID)
+	ginRoute.POST("/movies", ginRoute.creatNewMovie)
+	ginRoute.DELETE("/movies/:id", ginRoute.deleteMovieByID)
+	ginRoute.PUT("/movies/:id", ginRoute.updateMovieById)
 
 	return ginRoute
 }
@@ -192,5 +191,5 @@ func (sc *GinRoute) updateMovieById(c *gin.Context) {
 }
 
 func (sc *GinRoute) Run() interface{} {
-	return sc.route.Run()
+	return sc.Engine.Run()
 }
