@@ -49,7 +49,7 @@ func (sc *GinRoute) getMoviesByYear(c *gin.Context) {
 		return
 	}
 
-	results, err := sc.MongoRepository.GetMoviesByYear(year)
+	results, err := sc.GetMoviesByYear(year)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -85,7 +85,7 @@ func (sc *GinRoute) getMovieByID(c *gin.Context) {
 		return
 	}
 
-	result, err := sc.MongoRepository.GetMoviesById(id)
+	result, err := sc.GetMoviesById(id)
 
 	if errors.Is(err, mongo.ErrNoDocuments) {
 		fmt.Printf("No document was found with the id %s\n", idStr)
@@ -115,7 +115,7 @@ func (sc *GinRoute) creatNewMovie(c *gin.Context) {
 		return
 	}
 
-	insertResult, err := sc.MongoRepository.CreateNewMovie(reqPayload)
+	insertResult, err := sc.CreateNewMovie(reqPayload)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError,
@@ -140,7 +140,7 @@ func (sc *GinRoute) deleteMovieByID(c *gin.Context) {
 		return
 	}
 
-	deleteResult, err := sc.MongoRepository.DeleteMovieByID(id)
+	deleteResult, err := sc.DeleteMovieByID(id)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError,
@@ -173,7 +173,7 @@ func (sc *GinRoute) updateMovieById(c *gin.Context) {
 		return
 	}
 
-	updateResult, err := sc.MongoRepository.UpdateMovieByID(id, reqPayload)
+	updateResult, err := sc.UpdateMovieByID(id, reqPayload)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError,
